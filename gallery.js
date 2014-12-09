@@ -15,5 +15,10 @@ var Gallery = function(){
         });
     }
     
+    function StaticImageProvider(elem) {
+        this._$elem = $(elem);
+        this._$items = this._$elem.find('')
+    }
+    
     return Gallery;
 }();
