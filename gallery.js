@@ -50,7 +50,8 @@ var Gallery = function(){
             slide.src = $(this).prop('src');
             config.slides.push(slide);
         });
-        this._provider = new StaticSlideProvider(config);
+        //this._provider = new StaticSlideProvider(config);
+        this._provider = new AjaxSlideProvider(config);
     }
     
     function _resolvePosition(where) {
@@ -145,7 +146,7 @@ var StaticSlideProvider = function(){
         this._cache = {};
     }
     
-    StaticSlideProvider.prototype = SlideProvider.prototype;
+    StaticSlideProvider.prototype = $.extend({}, SlideProvider.prototype);
     StaticSlideProvider.prototype.constructor = StaticSlideProvider;
     
     function _processConfig(config){
@@ -196,11 +197,11 @@ var AjaxSlideProvider = function(){
     var CLASS_NAME = 'AjaxSlideProvider';
 
     function AjaxSlideProvider(config){
-        _processConfig.call(this, config);
         this._cache = {};
+        _processConfig.call(this, config);
     }
 
-    AjaxSlideProvider.prototype = SlideProvider.prototype;
+    AjaxSlideProvider.prototype = $.extend({}, SlideProvider.prototype);
     AjaxSlideProvider.prototype.constructor = AjaxSlideProvider;
 
     function _processConfig(config){
@@ -269,19 +270,41 @@ var SliderCanvas = function(){
     
     //TODO: handle case when there's no (= 0) slides
     function _init() {
+        var that = this;
         _loadSlides.call(this);
         
         if (this._config.slideWidth == null) {
-            this._config.slideWidth = this._images[0].width;
+            if (!this._images[0]) {
+                _loadSlide(0, function(){
+                    that._config.slideWidth = that._images[0].width;
+                    rest();
+                });
+            } else {
+                rest();
+            }
+        } else {
+            rest();
         }
         
-        this._$node.css({
-            width: this._config.slideWidth * this._provider.getLength()
-        });
+        function rest() {
+            that._$node.css({
+                width: that._config.slideWidth * that._provider.getLength()
+            });
+        }
     }
     
     function _loadSlide(idx) {
+        if (!this._images) {
+            this._images = new Array(this._provider.getLength());
+            this._$slides = new Array(this._images.length);
+        }
+        var image = this._images[idx] = this._provider.getSlide(idx);
         
+        var $node;
+        $node = $('<span class="slider__fakeItem"/>')
+            .data('idx', i);
+        this._$slides[i] = $node;
+        this._$node.append($node);
     }
     
     function _loadSlides() {
@@ -312,13 +335,18 @@ var SliderCanvas = function(){
         console.log(this._images[idx]);
         var $node;
         if (this._images[idx] == null) {
-            this._images[idx] = this._provider.getSlide(idx);
-            $node = $('<img alt=""/>')
-                .prop('src', this._images[idx].src);
-            this._$node
-                .find('[data-idx="' + idx + '"]')
-                .replaceWith($node);
-            this._$slides[idx] = $node;
+            this._provider.getSlide(idx, callback);
+            var that = this;
+            function callback(src) {
+                that._images[idx] = src;
+                
+                $node = $('<img alt=""/>')
+                    .prop('src', that._images[idx].src);
+                that._$node
+                    .find('[data-idx="' + idx + '"]')
+                    .replaceWith($node);
+                that._$slides[idx] = $node;
+            }
         } else {
             $node = this._$slides[idx]
         }
