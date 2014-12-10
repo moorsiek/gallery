@@ -1,5 +1,18 @@
 html, body { padding: 0; margin: 0;}
 
+.no-js .slider {
+    display: block;
+    padding: 10px;
+}
+.no-js li {
+    display: block;
+    margin-bottom: 5px;
+}
+.no-js .slider__item {
+    display: inline;
+    float: none;
+}
+
 .slider {
     display: block;
     list-style-type: none;
@@ -13,4 +26,12 @@ html, body { padding: 0; margin: 0;}
 .slider__item {
     display: block;
     float: left;
+}
+
+.slider-wrap {
+    width: 600px;
+    height: 337px; 
+}
+.slider__viewport {
+    overflow: hidden;
 }
