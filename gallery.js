@@ -12,8 +12,8 @@ var Gallery = function(){
         
         this._$node = $(elem);
         this._$parent = this._$node.parent();
-        this._$items = this._$node.find(this._o.itemSelector)
-            .detach();
+        /*this._$items = this._$node.find(this._o.itemSelector)
+            .detach();*/
         this._$viewport = $('<div class="slider__viewport"/>');
         
         this._$node.replaceWith(this._$viewport);
@@ -22,7 +22,7 @@ var Gallery = function(){
         
         //this._$items.appendTo(this._$canvas);
         
-        _setupProvider.call(this);
+        _setupProvider.call(this, this._o.slides);
         _setupCanvas.call(this);
 
         _setupHandlers.call(this);
@@ -43,15 +43,19 @@ var Gallery = function(){
         });
     }
     
-    function _setupProvider() {
+    function _setupProvider(slides) {
         var config = {
-            slides: []
+            slides: slides.map(function(item){
+                return {
+                    src: item
+                };
+            })
         };
-        this._$items.each(function(){
-            var slide = {};
-            slide.src = $(this).prop('src');
-            config.slides.push(slide);
-        });
+        //this._$items.each(function(){
+        //    var slide = {};
+        //    slide.src = $(this).prop('src');
+        //    config.slides.push(slide);
+        //});
         //this._provider = new StaticSlideProvider(config);
         this._provider = new AjaxSlideProvider(config);
     }
@@ -338,7 +342,8 @@ var SliderCanvas = function(){
                         that._images[idx] = image;
     
                         $node = $('<img alt=""/>')
-                            .prop('src', that._images[idx].src);
+                            .prop('src', that._images[idx].src)
+                            .prop('id', 'slider_item_' + idx);
                         that._$node
                             .find('#slider_item_' + idx)
                             .replaceWith($node);
@@ -361,6 +366,7 @@ var SliderCanvas = function(){
         
         return _getSlide.call(this, idx)
             .then(function($node){
+                //console.log('new pos ' + (-$node.offset().left + (parseFloat(that._$node.css('left')) || 0) + 'px'));
                 that._$node.stop().animate({
                     left: -$node.offset().left + (parseFloat(that._$node.css('left')) || 0) + 'px'
                 });

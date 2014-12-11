@@ -12,17 +12,26 @@
 
 <div class="slider-wrap">
     <ul class="slider">
-        <li><img class="slider__item" src="img/1.jpeg" alt=""></li>
+        <!--<li><img class="slider__item" src="img/1.jpeg" alt=""></li>
         <li><img class="slider__item" src="img/2.jpeg" alt=""/></li>
         <li><img class="slider__item" src="img/3.jpeg" alt=""/></li>
         <li><img class="slider__item" src="img/4.jpeg" alt=""/></li>
         <li><img class="slider__item" src="img/5.jpeg" alt=""/></li>
-        <li><img class="slider__item" src="img/6.jpeg" alt=""/></li>
+        <li><img class="slider__item" src="img/6.jpeg" alt=""/></li>-->
     </ul>
 </div>
 
 <script>
-    new Gallery('.slider');
+    new Gallery('.slider', {
+        slides: [
+            'img/1.jpeg',
+            'img/2.jpeg',
+            'img/3.jpeg',
+            'img/4.jpeg',
+            'img/5.jpeg',
+            'img/6.jpeg'
+        ]
+    });
 </script>
 
 </body>
