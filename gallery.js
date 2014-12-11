@@ -236,17 +236,17 @@ var AjaxSlideProvider = function(){
             throw new Error(CLASS_NAME + ': there\'s no slide with index ' + idx);
         }
         
+        var that = this;
         return new RSVP.Promise(function(resolve, reject){
-            if (!this._cache.images[idx]) {
-                var img = new Image,
-                    that = this;
+            if (!that._cache.images[idx]) {
+                var img = new Image;
                 img.onerror = img.onload = function(){
                     that._cache.images[idx] = img.src;
                     resolve(img);
                 };
-                img.src = this._slides[idx].src;
+                img.src = that._slides[idx].src;
             } else {
-                resolve(this._slides[idx]);
+                resolve(that._slides[idx]);
             }
         });
     };
@@ -283,10 +283,11 @@ var SliderCanvas = function(){
         return _loadSlides.call(this)
             .then(function(){
                 if (that._config.slideWidth == null) {
-                    _getSlide.call(this, function($node){
-                        that._config.slideWidth = that._images[0].width;
-                        rest();
-                    });
+                    _getSlide.call(that, 0)
+                        .then(function($node){
+                            that._config.slideWidth = that._images[0].width;
+                            rest();
+                        });
                 } else {
                     rest();
                 }
@@ -317,7 +318,7 @@ var SliderCanvas = function(){
                             .prop('src', that._images[i].src);
                     } else {
                         $node = $('<span class="slider__fakeItem"/>')
-                            .data('idx', i);
+                            .prop('id', 'slider_item_' + i);
                     }
                     that._$slides[i] = $node;
                     that._$node.append($node);
@@ -328,7 +329,7 @@ var SliderCanvas = function(){
     function _getSlide(idx) {
         var that = this;
         
-        return new RSVP.Promise(function(reject, resolve){
+        return new RSVP.Promise(function(resolve, reject){
             var $node;
             
             if (that._images[idx] == null) {
@@ -339,14 +340,14 @@ var SliderCanvas = function(){
                         $node = $('<img alt=""/>')
                             .prop('src', that._images[idx].src);
                         that._$node
-                            .find('[data-idx="' + idx + '"]')
+                            .find('#slider_item_' + idx)
                             .replaceWith($node);
                         that._$slides[idx] = $node;
                         
                         resolve($node);
                     });
             } else {
-                $node = this._$slides[idx];
+                $node = that._$slides[idx];
                 resolve($node);
             }
         });
@@ -358,7 +359,7 @@ var SliderCanvas = function(){
         
         var that = this;
         
-        return _getSlide.call(this)
+        return _getSlide.call(this, idx)
             .then(function($node){
                 that._$node.stop().animate({
                     left: -$node.offset().left + (parseFloat(that._$node.css('left')) || 0) + 'px'
