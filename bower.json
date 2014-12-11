@@ -1,0 +1,29 @@
+{
+  "name": "gallery",
+  "main": "gallery.js",
+  "version": "0.1.0",
+  "homepage": "https://github.com/schyzoo/gallery",
+  "authors": [
+    "schyzoo <schyzoo@gmail.com>"
+  ],
+  "description": "javascript image gallery",
+  "keywords": [
+    "gallery",
+    "slider",
+    "image",
+    "ajax",
+    "oop"
+  ],
+  "license": "MIT",
+  "private": true,
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "rsvp": "~3.0.13"
+  }
+}

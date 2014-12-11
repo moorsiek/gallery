@@ -24,21 +24,23 @@ var Gallery = function(){
         
         _setupProvider.call(this);
         _setupCanvas.call(this);
-        
-        this._currentIdx = 0;
-        
-        _go.call(this, 0);
 
         _setupHandlers.call(this);
     }
     
     function _setupCanvas() {
+        var that = this;
         this._$canvas = $('<div class="slider__canvas"/>')
             .css({
                 position: 'relative'
             })
             .appendTo(this._$viewport);
-        this._canvas = new SliderCanvas(this._$canvas, this._provider, {});
+        this._canvas = new SliderCanvas(this._$canvas, this._provider, {
+            onload: function(){
+                that._currentIdx = 0;
+                _go.call(that, 0);
+            }
+        });
     }
     
     function _setupProvider() {
@@ -229,22 +231,27 @@ var AjaxSlideProvider = function(){
         }
         return this._cache.thumbs;
     };
-    AjaxSlideProvider.prototype.getSlide = function(idx, callback){
+    AjaxSlideProvider.prototype.getSlide = function(idx){
         if (idx > this._slides.length || idx < 0) {
             throw new Error(CLASS_NAME + ': there\'s no slide with index ' + idx);
         }
-        if (!this._cache.images[idx]) {
-            var img = new Image,
-                that = this;
-            img.onerror = img.onload = function(){
-                that._cache.images[idx] = img.src;
-                callback(img);
-            };
-            img.src = this._slides[idx].src;
-        }
-        callback(this._slides[idx]);
+        
+        return new RSVP.Promise(function(resolve, reject){
+            if (!this._cache.images[idx]) {
+                var img = new Image,
+                    that = this;
+                img.onerror = img.onload = function(){
+                    that._cache.images[idx] = img.src;
+                    resolve(img);
+                };
+                img.src = this._slides[idx].src;
+            } else {
+                resolve(this._slides[idx]);
+            }
+        });
     };
     AjaxSlideProvider.prototype.getSlides = function(){
+        return RSVP.resolve();
         return false;
         if (!this._cache.images) {
             this._cache.images = new Array(this._slides.length);
@@ -265,89 +272,84 @@ var SliderCanvas = function(){
         this._config = $.extend({}, config);
         this._$node = $(node);
         this._provider = provider;
-        _init.call(this);
+        _init.call(this)
+            .then(config.onload);
     }
     
     //TODO: handle case when there's no (= 0) slides
     function _init() {
         var that = this;
-        _loadSlides.call(this, function(){
-            if (that._config.slideWidth == null) {
-                _getSlide.call(this, function($node){
-                    that._config.slideWidth = that._images[0].width;
-                    rest();
-                });
-            } else {
-                rest();
-            }
-
-            function rest() {
-                that._$node.css({
-                    width: that._config.slideWidth * that._provider.getLength()
-                });
-            }
-        });
-    }
-    
-    function _loadSlide(idx) {
-        if (!this._images) {
-            this._images = new Array(this._provider.getLength());
-            this._$slides = new Array(this._images.length);
-        }
-        var image = this._images[idx] = this._provider.getSlide(idx);
         
-        var $node;
-        $node = $('<span class="slider__fakeItem"/>')
-            .data('idx', i);
-        this._$slides[i] = $node;
-        this._$node.append($node);
+        return _loadSlides.call(this)
+            .then(function(){
+                if (that._config.slideWidth == null) {
+                    _getSlide.call(this, function($node){
+                        that._config.slideWidth = that._images[0].width;
+                        rest();
+                    });
+                } else {
+                    rest();
+                }
+    
+                function rest() {
+                    that._$node.css({
+                        width: that._config.slideWidth * that._provider.getLength()
+                    });
+                }
+            });
     }
 
-    function _loadSlides(callback) {
+    function _loadSlides() {
         var that = this;
-        this._provider.getSlides(function(images){
-            if (images) {
-                that._images = images;
-            } else {
-                that._images = new Array(that._provider.getLength());
-            }
-            that._$slides = new array(that._images.length);
-
-            var $node;
-            for (var i = 0, ilim = that._images.length; i < ilim; ++i) {
-                if (that._images[i] != null) {
-                    $node = $('<img alt="" class="slider__item"/>')
-                        .prop('src', that._images[i].src);
+        return this._provider.getSlides()
+            .then(function(images){
+                if (images) {
+                    that._images = images;
                 } else {
-                    $node = $('<span class="slider__fakeItem"/>')
-                        .data('idx', i);
+                    that._images = new Array(that._provider.getLength());
                 }
-                that._$slides[i] = $node;
-                that._$node.append($node);
-            }
+                that._$slides = new Array(that._images.length);
 
-            if (callback) callback();
-        });
+                var $node;
+                for (var i = 0, ilim = that._images.length; i < ilim; ++i) {
+                    if (that._images[i] != null) {
+                        $node = $('<img alt="" class="slider__item"/>')
+                            .prop('src', that._images[i].src);
+                    } else {
+                        $node = $('<span class="slider__fakeItem"/>')
+                            .data('idx', i);
+                    }
+                    that._$slides[i] = $node;
+                    that._$node.append($node);
+                }
+            });
     }
     
-    function _getSlide(idx, callback) {
-        var that = this,
-            $node;
-        if (this._images[idx] == null) {
-            this._provider.getSlide(idx, function(image){
-                that._images[idx] = image;
-
-                $node = $('<img alt=""/>')
-                    .prop('src', that._images[idx].src);
-                that._$node
-                    .find('[data-idx="' + idx + '"]')
-                    .replaceWith($node);
-                that._$slides[idx] = $node;
-            });
-        } else {
-            $node = this._$slides[idx];
-        }
-        if (callback) callback($node);
+    function _getSlide(idx) {
+        var that = this;
+        
+        return new RSVP.Promise(function(reject, resolve){
+            var $node;
+            
+            if (that._images[idx] == null) {
+                that._provider.getSlide(idx)
+                    .then(function(image){
+                        that._images[idx] = image;
+    
+                        $node = $('<img alt=""/>')
+                            .prop('src', that._images[idx].src);
+                        that._$node
+                            .find('[data-idx="' + idx + '"]')
+                            .replaceWith($node);
+                        that._$slides[idx] = $node;
+                        
+                        resolve($node);
+                    });
+            } else {
+                $node = this._$slides[idx];
+                resolve($node);
+            }
+        });
     }
 
     SliderCanvas.prototype.go = function(idx){
@@ -355,11 +357,13 @@ var SliderCanvas = function(){
         console.log(this._images[idx]);
         
         var that = this;
-        _getSlide.call(this, function($node){
-            that._$node.stop().animate({
-                left: -$node.offset().left + (parseFloat(that._$node.css('left')) || 0) + 'px'
+        
+        return _getSlide.call(this)
+            .then(function($node){
+                that._$node.stop().animate({
+                    left: -$node.offset().left + (parseFloat(that._$node.css('left')) || 0) + 'px'
+                });
             });
-        });
     };
     
     return SliderCanvas;
