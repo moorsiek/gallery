@@ -348,9 +348,13 @@ var SliderCanvas = function(){
             this._$node.append($node);
         }
         
-        this._$node.css({
-            left: -this._$slides[this._currentSlideIdx].offset().left + (parseFloat(this._$node.css('left')) || 0) + 'px'
-        });
+        //if (this._$slides[this._currentSlideIdx].prevAll().filter(function(){ return this === $node[0]; }).length) {
+        //console.log('Idxses: ', idx, this._currentSlideIdx);
+        if (idx < this._currentSlideIdx) {
+            this._$node.css({
+                left: -this._$slides[this._currentSlideIdx].offset().left + (parseFloat(this._$node.css('left')) || 0) + 'px'
+            });
+        }
         
         return $node;
     }
@@ -390,7 +394,6 @@ var SliderCanvas = function(){
                 that._$node.stop().animate({
                     left: -$node.offset().left + (parseFloat(that._$node.css('left')) || 0) + 'px'
                 });
-                
                 that._currentSlideIdx = idx;
             });
     };
