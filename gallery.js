@@ -438,6 +438,10 @@ var GalleryBulletsPlugin = function(){
     function GalleryBulletsPlugin(api) {
         this._api = api;
         
+        if (!this._api._o.bullets) {
+            return;
+        }
+        
         var that = this;
         api.on('init', function(){
             _init.call(that);
@@ -462,13 +466,20 @@ var GalleryBulletsPlugin = function(){
         this._$wrap = $('<div class="slider-bullets"/>')
             .appendTo($ctr)
             .css('text-align', 'center');
+        if (this._api._o.bullets.style === 'bullets') {
+            this._$wrap.addClass('slider-bullets_style_bullets');
+        }
         this._$node = $('<ul class="slider-bullets__inner"/>')
             .appendTo(this._$wrap);
         
         for (var i = 0, ilim = this._api._provider.getLength(); i < ilim; ++i) {
             $li = $('<li class="slider-bullets__item"/>');
-            $a = $('<a href="#"/>')
-                .text(i);
+            $a = $('<a href="#"/>');
+            if (this._api._o.bullets.style === 'bullets') {
+                $a.html('&middot;');
+            } else {
+                $a.text(i);
+            }
             $li.append($a);
             this._$node.append($li);
         }

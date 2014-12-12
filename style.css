@@ -52,8 +52,20 @@ html, body { padding: 0; margin: 0;}
 .slider-bullets__item {
     display: block;
     float: left;
-    padding: 4px;
+    padding: 10px;
+    position: relative;
+}
+.slider-bullets__item a {
+    display: block;
+    height: 100%;
+    position: absolute;
+    width: 100%;
+    top: 0;
+    left: 0;
 }
 .slider-bullets__item_active {
     background: #cecece;
+}
+.slider-bullets_style_bullets .slider-bullets__item a {
+    text-decoration: none;
 }
