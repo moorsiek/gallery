@@ -276,6 +276,7 @@ var SliderCanvas = function(){
         this._config = $.extend({}, config);
         this._$node = $(node);
         this._provider = provider;
+        this._currentSlideIdx = 0;
         _init.call(this)
             .then(config.onload);
     }
@@ -315,19 +316,43 @@ var SliderCanvas = function(){
                 }
                 that._$slides = new Array(that._images.length);
 
-                var $node;
                 for (var i = 0, ilim = that._images.length; i < ilim; ++i) {
-                    if (that._images[i] != null) {
-                        $node = $('<img alt="" class="slider__item"/>')
-                            .prop('src', that._images[i].src);
-                    } else {
-                        $node = $('<span class="slider__fakeItem"/>')
-                            .prop('id', 'slider_item_' + i);
-                    }
-                    that._$slides[i] = $node;
-                    that._$node.append($node);
+                    _insertSlide.call(that, that._images[i], i)
                 }
             });
+    }
+
+    /**
+     * Insert a new slide (or a fake slide, if no image given) into canvas.
+     * 
+     * @param image Image|null An image to server as a source for new slide. If null, then fake slide is inserted
+     * @param idx int Index of the slide
+     * @private
+     */
+    function _insertSlide(image, idx) {
+        var $node;
+        if (image != null) {
+            $node = $('<img alt="" class="slider__item"/>')
+                .prop('src', image.src);
+        } else {
+            $node = $('<span class="slider__fakeItem"/>');
+        }
+            
+        $node.prop('id', 'slider_item_' + idx);
+
+        if (this._$slides[idx]) {
+            this._$slides[idx].replaceWith($node);
+            this._$slides[idx] = $node;
+        } else {
+            this._$slides[idx] = $node;
+            this._$node.append($node);
+        }
+        
+        this._$node.css({
+            left: -this._$slides[this._currentSlideIdx].offset().left + (parseFloat(this._$node.css('left')) || 0) + 'px'
+        });
+        
+        return $node;
     }
     
     function _getSlide(idx) {
@@ -340,14 +365,8 @@ var SliderCanvas = function(){
                 that._provider.getSlide(idx)
                     .then(function(image){
                         that._images[idx] = image;
-    
-                        $node = $('<img alt=""/>')
-                            .prop('src', that._images[idx].src)
-                            .prop('id', 'slider_item_' + idx);
-                        that._$node
-                            .find('#slider_item_' + idx)
-                            .replaceWith($node);
-                        that._$slides[idx] = $node;
+                        
+                        var $node = _insertSlide.call(that, that._images[idx], idx);
                         
                         resolve($node);
                     });
@@ -366,10 +385,13 @@ var SliderCanvas = function(){
         
         return _getSlide.call(this, idx)
             .then(function($node){
-                //console.log('new pos ' + (-$node.offset().left + (parseFloat(that._$node.css('left')) || 0) + 'px'));
+                console.log($node[0]);
+                console.log('new pos ' + (-$node.offset().left + (parseFloat(that._$node.css('left')) || 0) + 'px'));
                 that._$node.stop().animate({
                     left: -$node.offset().left + (parseFloat(that._$node.css('left')) || 0) + 'px'
                 });
+                
+                that._currentSlideIdx = idx;
             });
     };
     
