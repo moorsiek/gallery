@@ -26,7 +26,23 @@ var Gallery = function(){
         _setupCanvas.call(this);
 
         _setupHandlers.call(this);
+
+        this._plugins = [];
+        for (var i = 0, ilim = Gallery.plugins.length; i < ilim; ++i) {
+            this._plugins = new Gallery.plugins[i](this);
+        }
+        
+        if (this._handlers && this._handlers.init.length) {
+            for (var i = 0, ilim = this._handlers.init.length; i < ilim; ++i) {
+                this._handlers.init[i]();
+            }
+        }
     }
+    Gallery.plugins = []; 
+    
+    Gallery.prototype.go = function(idx){
+        _go.call(this, idx);
+    };
     
     function _setupCanvas() {
         var that = this;
@@ -87,6 +103,12 @@ var Gallery = function(){
         where = _resolvePosition.call(this, where);
         this._canvas.go(where);
         this._currentIdx = where;
+
+        if (this._handlers && this._handlers.go.length) {
+            for (var i = 0, ilim = this._handlers.go.length; i < ilim; ++i) {
+                this._handlers.go[i](where);
+            }
+        }
     }
     
     function _setupHandlers() {
@@ -115,6 +137,17 @@ var Gallery = function(){
         this._$elem = $(elem);
         this._$items = this._$elem.find('')
     }
+    
+    Gallery.prototype.on = function(event, handler){
+        this._handlers = this._handlers || {};
+        this._handlers[event] = this._handlers[event] || [];
+        this._handlers[event].push(handler);
+    };
+    
+    Gallery.registerPlugin = function(plugin) {
+        this.plugins = this.plugins || [];
+        this.plugins.push(plugin);
+    };
     
     return Gallery;
 }();
@@ -400,3 +433,60 @@ var SliderCanvas = function(){
     
     return SliderCanvas;
 }();
+
+var GalleryBulletsPlugin = function(){
+    function GalleryBulletsPlugin(api) {
+        this._api = api;
+        
+        var that = this;
+        api.on('init', function(){
+            _init.call(that);
+            api._$node.parent();
+        });
+        
+        api.on('go', function(idx){
+            _go.call(that, idx);
+        });
+        
+        console.log('constructed');
+    }
+
+    function _init() {
+        console.log('inited');
+        
+        var that = this,
+            $ctr = this._api._$viewport.parent(),
+            $li,
+            $a;
+            
+        this._$wrap = $('<div class="slider-bullets"/>')
+            .appendTo($ctr)
+            .css('text-align', 'center');
+        this._$node = $('<ul class="slider-bullets__inner"/>')
+            .appendTo(this._$wrap);
+        
+        for (var i = 0, ilim = this._api._provider.getLength(); i < ilim; ++i) {
+            $li = $('<li class="slider-bullets__item"/>');
+            $a = $('<a href="#"/>')
+                .text(i);
+            $li.append($a);
+            this._$node.append($li);
+        }
+        
+        this._$node.on('click', 'a', function(e){
+            e.preventDefault();
+            that._api.go($(this).parent().index());
+        });
+    }
+    
+    function _go(idx) {
+        this._$node.find('li')
+            .removeClass('slider-bullets__item_active')
+            .eq(idx)
+                .addClass('slider-bullets__item_active');
+    }
+    
+    return GalleryBulletsPlugin;
+}();
+
+Gallery.registerPlugin(GalleryBulletsPlugin);

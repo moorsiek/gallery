@@ -35,3 +35,25 @@ html, body { padding: 0; margin: 0;}
 .slider__viewport {
     overflow: hidden;
 }
+
+
+
+
+
+/* slider bullets draft css */
+.slider-bullets {
+
+}
+.slider-bullets__inner {
+    display: inline-block;
+    overflow: hidden;
+    margin: 0 auto;
+}
+.slider-bullets__item {
+    display: block;
+    float: left;
+    padding: 4px;
+}
+.slider-bullets__item_active {
+    background: #cecece;
+}
