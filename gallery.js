@@ -61,11 +61,12 @@ var Gallery = function(){
     
     function _setupProvider(slides) {
         var config = {
-            slides: slides.map(function(item){
-                return {
-                    src: item
-                };
-            })
+            //slides: slides.map(function(item){
+            //    return {
+            //        src: item
+            //    };
+            //})
+            slides: slides
         };
         //this._$items.each(function(){
         //    var slide = {};
@@ -232,6 +233,81 @@ var StaticSlideProvider = function(){
     return StaticSlideProvider;
 }();
 
+var HtmlSlide = function(){
+    function HtmlSlide(html) {
+        this._html = html;
+        this._$node = null;
+    }
+    
+    HtmlSlide.prototype.load = function(){
+        var that = this;        
+        return new RSVP.Promise(function(resolve, reject){
+            var images,
+                $node,
+                $imgs,
+                imagesLeft;
+            $node = $(that._html);
+            $imgs = $node.find('img[src]');
+            imagesLeft = $imgs.length;
+            if (imagesLeft === 0) {
+                afterLoad();
+            }
+            
+            images = new Array(imagesLeft);
+            $imgs.each(function(idx){
+                images[idx] = this.src;
+                
+                var img = new Image;
+                img.onerror = img.onload = function(){
+                    images[idx] = img.src;
+                    console.log("Loading of image '" + img.src + "' is done");
+                    afterLoad();
+                };
+                img.src = this.src;
+            });
+
+            function afterLoad() {
+                if (--imagesLeft <= 0) {
+                    resolve(that);
+                }
+            }
+        });
+    };
+
+    HtmlSlide.prototype.getHtml = function(){
+        if (!this._$node) {
+            this._$node = $(this._html);
+        }
+        return this._$node;
+    };
+    
+    HtmlSlide.prototype.getWidth = function(){
+        var $node = this.getHtml(),
+            revertCss = {
+                visibility: $node.css('visibility'),
+                top: $node.css('top')
+            },
+            width;
+        
+        $node
+            .css({
+                visibility: 'hidden',
+                top: '-6000px'
+            })
+            .appendTo('body');
+        
+        width = $node.outerWidth(true);
+        
+        $node
+            .css(revertCss)
+            .detach();
+        
+        return width;
+    };
+    
+    return HtmlSlide;
+}();
+
 var AjaxSlideProvider = function(){
     var CLASS_NAME = 'AjaxSlideProvider';
 
@@ -248,7 +324,7 @@ var AjaxSlideProvider = function(){
             throw new Error(CLASS_NAME + ': bad config! config variable "slides" must be present and be an array of slide definitions.');
         }
         this._slides = config.slides;
-        this._cache.images = new Array(this._slides.length);
+        this._cache.slides = new Array(this._slides.length);
     }
     AjaxSlideProvider.prototype.getLength = function(){
         return this._slides.length;
@@ -275,7 +351,18 @@ var AjaxSlideProvider = function(){
         
         var that = this;
         return new RSVP.Promise(function(resolve, reject){
-            if (!that._cache.images[idx]) {
+            if (!that._cache.slides[idx]) {
+                var slide = new HtmlSlide(that._slides[idx]);
+                slide.load()
+                    .then(function(){
+                        that._cache.slides[idx] = slide;
+                        resolve(slide);
+                    });
+            } else {
+                resolve(that._cache.slides[idx]);
+            }
+            
+/*            if (!that._cache.slides[idx]) {
                 var img = new Image;
                 img.onerror = img.onload = function(){
                     that._cache.images[idx] = img.src;
@@ -284,7 +371,7 @@ var AjaxSlideProvider = function(){
                 img.src = that._slides[idx].src;
             } else {
                 resolve(that._slides[idx]);
-            }
+            }*/
         });
     };
     AjaxSlideProvider.prototype.getSlides = function(){
@@ -310,6 +397,7 @@ var SliderCanvas = function(){
         this._$node = $(node);
         this._provider = provider;
         this._currentSlideIdx = 0;
+        this._$slides = null;
         _init.call(this)
             .then(config.onload);
     }
@@ -318,12 +406,16 @@ var SliderCanvas = function(){
     function _init() {
         var that = this;
         
+        /*return new RSVP.Promise(function(resolve, reject){
+            
+        })*/
+        
         return _loadSlides.call(this)
             .then(function(){
                 if (that._config.slideWidth == null) {
                     _getSlide.call(that, 0)
                         .then(function($node){
-                            that._config.slideWidth = that._images[0].width;
+                            that._config.slideWidth = that._slides[0].getWidth();
                             rest();
                         });
                 } else {
@@ -341,16 +433,16 @@ var SliderCanvas = function(){
     function _loadSlides() {
         var that = this;
         return this._provider.getSlides()
-            .then(function(images){
-                if (images) {
-                    that._images = images;
+            .then(function(slides){
+                if (slides) {
+                    that._slides = slides;
                 } else {
-                    that._images = new Array(that._provider.getLength());
+                    that._slides = new Array(that._provider.getLength());
                 }
-                that._$slides = new Array(that._images.length);
+                that._$slides = new Array(that._slides.length);
 
-                for (var i = 0, ilim = that._images.length; i < ilim; ++i) {
-                    _insertSlide.call(that, that._images[i], i)
+                for (var i = 0, ilim = that._slides.length; i < ilim; ++i) {
+                    _insertSlide.call(that, that._slides[i], i)
                 }
             });
     }
@@ -362,11 +454,14 @@ var SliderCanvas = function(){
      * @param idx int Index of the slide
      * @private
      */
-    function _insertSlide(image, idx) {
+    function _insertSlide(slide, idx) {
         var $node;
-        if (image != null) {
-            $node = $('<img alt="" class="slider__item"/>')
-                .prop('src', image.src);
+        if (slide != null) {
+            $node = $('<div class="slider__item"/>')
+                .append(slide.getHtml());
+            
+            //$node = $('<img alt="" class="slider__item"/>')
+            //    .prop('src', image.src);
         } else {
             $node = $('<span class="slider__fakeItem"/>');
         }
@@ -398,12 +493,12 @@ var SliderCanvas = function(){
         return new RSVP.Promise(function(resolve, reject){
             var $node;
             
-            if (that._images[idx] == null) {
+            if (that._slides[idx] == null) {
                 that._provider.getSlide(idx)
-                    .then(function(image){
-                        that._images[idx] = image;
+                    .then(function(slide){
+                        that._slides[idx] = slide;
                         
-                        var $node = _insertSlide.call(that, that._images[idx], idx);
+                        var $node = _insertSlide.call(that, that._slides[idx], idx);
                         
                         resolve($node);
                     });
@@ -416,7 +511,7 @@ var SliderCanvas = function(){
 
     SliderCanvas.prototype.go = function(idx){
         console.log('go ' + idx);
-        console.log(this._images[idx]);
+        console.log(this._slides[idx]);
         
         var that = this;
         
